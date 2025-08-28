@@ -4,6 +4,11 @@ from model_objects import Product, SpecialOfferType, ProductUnit
 from shopping_cart import ShoppingCart
 from teller import Teller
 from tests.fake_catalog import FakeCatalog
+from .helpers import (
+    setup_five_for_amount_test,
+    setup_three_for_two_test,
+    setup_two_for_amount_test
+)
 
 
 def test_ten_percent_discount():
@@ -30,3 +35,73 @@ def test_ten_percent_discount():
     assert 1.99 == receipt_item.price
     assert 2.5 * 1.99 == pytest.approx(receipt_item.total_price, 0.01)
     assert 2.5 == receipt_item.quantity
+
+
+def test_three_for_two_offer():
+    """Test that discount is applied on 3 items and pay for 2."""
+    _, _, cart, teller = setup_three_for_two_test()
+
+    receipt = teller.checks_out_articles_from(cart)
+
+    assert 2 == receipt.total_price()
+    receipt_item = receipt.items[0]
+    assert 3 == receipt_item.quantity
+
+
+def test_two_for_amount_offer():
+    _, _, cart, teller = setup_two_for_amount_test()
+
+    receipt = teller.checks_out_articles_from(cart)
+
+    assert 1 == receipt.total_price()
+    receipt_item = receipt.items[0]
+    assert 3 == receipt_item.quantity
+
+
+def test_five_for_amount_offer():
+    _, _, cart, teller = setup_five_for_amount_test()
+
+    receipt = teller.checks_out_articles_from(cart)
+
+    assert 1 == receipt.total_price()
+    receipt_item = receipt.items[0]
+    assert 5 == receipt_item.quantity
+
+
+def test_three_for_two_offer_not_enough_items():
+    """Test that discount is not applied when less than 3 items."""
+    _, _, cart, teller = setup_three_for_two_test(cart_quantity=2)
+
+    receipt = teller.checks_out_articles_from(cart)
+
+    # Should pay full price for 2 items (no discount)
+    assert 2 == receipt.total_price()
+    receipt_item = receipt.items[0]
+    assert 2 == receipt_item.quantity
+    assert 0 == len(receipt.discounts)
+
+
+def test_two_for_amount_offer_not_enough_items():
+    """Test that discount is not applied when less than 2 items."""
+    _, _, cart, teller = setup_two_for_amount_test(cart_quantity=1)
+
+    receipt = teller.checks_out_articles_from(cart)
+
+    # Should pay full price for 1 item (no discount)
+    assert 1 == receipt.total_price()
+    receipt_item = receipt.items[0]
+    assert 1 == receipt_item.quantity
+    assert 0 == len(receipt.discounts)
+
+
+def test_five_for_amount_offer_not_enough_items():
+    """Test that discount is not applied when less than 5 items."""
+    _, _, cart, teller = setup_five_for_amount_test(cart_quantity=3)
+
+    receipt = teller.checks_out_articles_from(cart)
+
+    # Should pay full price for 3 items (no discount)
+    assert 3 == receipt.total_price()
+    receipt_item = receipt.items[0]
+    assert 3 == receipt_item.quantity
+    assert 0 == len(receipt.discounts)
