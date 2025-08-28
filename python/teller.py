@@ -1,5 +1,6 @@
 from model_objects import Offer
 from receipt import Receipt
+from offer_handler import OfferHandler
 
 
 class Teller:
@@ -7,6 +8,7 @@ class Teller:
     def __init__(self, catalog):
         self.catalog = catalog
         self.offers = {}
+        self.offer_handler = OfferHandler()
 
     def add_special_offer(self, offer_type, product, argument):
         self.offers[product] = Offer(offer_type, product, argument)
@@ -21,6 +23,8 @@ class Teller:
             price = quantity * unit_price
             receipt.add_product(p, quantity, unit_price, price)
 
-        the_cart.handle_offers(receipt, self.offers, self.catalog)
+        # Use OfferHandler instead of cart.handle_offers
+        self.offer_handler.apply_offers(
+            the_cart, self.offers, self.catalog, receipt)
 
         return receipt

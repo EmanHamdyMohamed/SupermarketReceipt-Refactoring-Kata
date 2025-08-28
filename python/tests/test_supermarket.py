@@ -7,7 +7,8 @@ from tests.fake_catalog import FakeCatalog
 from .helpers import (
     setup_five_for_amount_test,
     setup_three_for_two_test,
-    setup_two_for_amount_test
+    setup_two_for_amount_test,
+    setup_multiple_products_test
 )
 
 
@@ -43,6 +44,7 @@ def test_three_for_two_offer():
 
     receipt = teller.checks_out_articles_from(cart)
 
+    # Should pay price for 2 item instead of 3
     assert 2 == receipt.total_price()
     receipt_item = receipt.items[0]
     assert 3 == receipt_item.quantity
@@ -53,6 +55,7 @@ def test_two_for_amount_offer():
 
     receipt = teller.checks_out_articles_from(cart)
 
+    # Should pay price for 1 item instead of 3
     assert 1 == receipt.total_price()
     receipt_item = receipt.items[0]
     assert 3 == receipt_item.quantity
@@ -63,6 +66,7 @@ def test_five_for_amount_offer():
 
     receipt = teller.checks_out_articles_from(cart)
 
+    # Should pay price for 1 item instead of 5
     assert 1 == receipt.total_price()
     receipt_item = receipt.items[0]
     assert 5 == receipt_item.quantity
@@ -105,3 +109,49 @@ def test_five_for_amount_offer_not_enough_items():
     receipt_item = receipt.items[0]
     assert 3 == receipt_item.quantity
     assert 0 == len(receipt.discounts)
+
+
+def test_apply_offer_multiple_same_product():
+    _, _, cart, teller = setup_three_for_two_test(7)
+
+    receipt = teller.checks_out_articles_from(cart)
+
+    # Should pay price for 5 item instead of 7
+    assert 5 == receipt.total_price()
+    receipt_item = receipt.items[0]
+    assert 7 == receipt_item.quantity
+
+
+def test_three_for_two_boundary():
+    _, _, cart, teller = setup_three_for_two_test(2)
+
+    receipt = teller.checks_out_articles_from(cart)
+
+    # Should pay price for 2 item
+    assert 2 == receipt.total_price()
+    receipt_item = receipt.items[0]
+    assert 2 == receipt_item.quantity
+
+
+def test_multiple_products_different_offers():
+    """Test multiple products with different types of offers applied."""
+    _, _, _, _, _,_,  cart, teller = setup_multiple_products_test()
+
+    # Process checkout
+    receipt = teller.checks_out_articles_from(cart)
+
+    # Verify all items are present
+    assert 5 == len(receipt.items)
+
+    # Verify discounts are applied
+    assert 4 == len(receipt.discounts)
+
+    # Verify total price calculation
+    # Toothbrush: 3 items, pay for 2
+    # Apples: 2kg * 2 = 4.00, 10% off = 3.60
+    # Milk: 2 items, pay 2.50 instead of 3 = 2.50
+    # Bread: 5 items, pay 4 instead of 5 = 4
+    # Soap: 1 items, pay .50
+    # Total: 2 + 3.60 + 2.50 + 4 = 12.10
+    expected_total = 2 + 3.60 + 2.50 + 4 + 0.50
+    assert expected_total == receipt.total_price()
